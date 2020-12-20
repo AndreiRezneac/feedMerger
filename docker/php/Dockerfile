@@ -1,0 +1,34 @@
+FROM php:7.4-cli
+
+RUN apt-get update && apt-get install -y git unzip curl
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN composer --version
+
+# Set timezone
+RUN rm /etc/localtime
+RUN ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+RUN "date"
+
+# set up php
+RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/php.ini \
+ && echo "display_startup_errors = On" >> /usr/local/etc/php.ini \
+ && echo "display_errors = On" >> /usr/local/etc/php/php.ini \
+ && echo "date.timezone=\"Europe/Berlin\"" >> /usr/local/etc/php/php.ini
+
+ADD entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# install xdebug
+RUN pecl install xdebug && docker-php-ext-enable xdebug \
+ && echo "xdebug.mode=coverage" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+ && echo "xdebug.discover_client_host=1" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+ && echo "xdebug.idekey=\"PHPSTORM\"" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["php","-S", "0.0.0.0:80", "./public/index.php"]
+
+VOLUME /www
+WORKDIR /www
+EXPOSE 80
